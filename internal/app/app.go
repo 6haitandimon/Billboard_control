@@ -25,6 +25,7 @@ func RegisterRoutes(r *mux.Router) {
 	userProtecte.HandleFunc("/schedule/setting/update", ScheduleSettingHandler).Methods("POST")
 	userProtecte.HandleFunc("/schedule/setting/update/save", ScheduleSettingSaveHandler).Methods("POST")
 	userProtecte.HandleFunc("/media", GetADSAllHandler).Methods("GET")
+	userProtecte.HandleFunc("/statistic", GetStatisticHandler).Methods("POST")
 
 	//adsProtecte := r.PathPrefix("/ads").Subrouter()
 	//adsProtecte.Use(AuthMiddleware)

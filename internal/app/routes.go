@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"time"
 )
 
 func GetUsersHandler(w http.ResponseWriter, r *http.Request) {
@@ -470,12 +471,35 @@ func GetDeviceADSHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Error to deserialize ads", http.StatusInternalServerError)
 		return
 	}
-	fmt.Println(adsId)
+	//fmt.Println(adsId)
+
+	if time.Since(scheduleTrue.LastGet).Seconds() > float64(scheduleTrue.Freq) {
+		adsId = append(adsId[1:], adsId[0])
+
+		scheduleTrue.LastGet = time.Now()
+
+		adIDsJSON, err := json.Marshal(adsId)
+		if err != nil {
+			http.Error(w, "Error to serialize ad ids", http.StatusInternalServerError)
+			return
+		}
+
+		scheduleTrue.AdIDs = string(adIDsJSON)
+
+		err = services.UpdateSchedule(scheduleTrue)
+		if err != nil {
+			http.Error(w, "Error to update schedule", http.StatusInternalServerError)
+			return
+		}
+	}
+
 	ads, err := services.GetMediaByID(adsId[0])
 	if err != nil {
 		http.Error(w, "Error to fetch ads", http.StatusInternalServerError)
 		return
 	}
+
+	err = services.UpdateStatistic(DeviceID.DeviceID, ads.ID)
 	host := os.Getenv("SERVER_API_HOST")
 	adLink := fmt.Sprintf("http://%s%s", host, ads.FilePath)
 
@@ -491,7 +515,62 @@ func GetDeviceADSHandler(w http.ResponseWriter, r *http.Request) {
 
 func ScheduleSettingSaveHandler(w http.ResponseWriter, r *http.Request) {
 	UserID := r.Context().Value(UserIDKey).(int)
+	var scheduleUpdate struct {
+		ID      int   `json:"id"`
+		GroupID int   `json:"group_id"`
+		Freq    int64 `json:"freq"`
+		ADSId   []int `json:"ad_ids"`
+	}
 
+	if err := json.NewDecoder(r.Body).Decode(&scheduleUpdate); err != nil {
+		http.Error(w, "Invalid request payload", http.StatusBadRequest)
+		return
+	}
+
+	var schedule = models.Schedule{
+		ID:      scheduleUpdate.ID,
+		GroupID: scheduleUpdate.GroupID,
+		UserID:  UserID,
+		Freq:    scheduleUpdate.Freq,
+	}
+
+	fmt.Println(scheduleUpdate.ADSId)
+
+	adIDsJSON, err := json.Marshal(scheduleUpdate.ADSId)
+	if err != nil {
+		http.Error(w, "Error to serialize ad ids", http.StatusInternalServerError)
+		return
+	}
+	schedule.AdIDs = string(adIDsJSON)
+
+	fmt.Println(schedule.AdIDs)
+
+	err = services.UpdateSchedule(schedule)
+
+	if err != nil {
+		http.Error(w, "Error to save schedule", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+
+}
+
+func GetStatisticHandler(w http.ResponseWriter, r *http.Request) {
+	var Statistic struct {
+		AdId int `json:"ad_id"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&Statistic); err != nil {
+		http.Error(w, "Invalid request payload", http.StatusBadRequest)
+		return
+	}
+
+	stat, err := services.GetStatisticByADSId(Statistic.AdId)
+	if err != nil {
+		http.Error(w, "Error to fetch statistic", http.StatusInternalServerError)
+		return
+	}
+	json.NewEncoder(w).Encode(stat)
 }
 
 func HelloPagesHandler(w http.ResponseWriter, r *http.Request) {
