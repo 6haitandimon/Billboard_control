@@ -14,5 +14,5 @@ func GetMediaByID(ID int) (models.Advertisements, error) {
 }
 
 func DeleteMedia(media *models.Advertisements) error {
-	return repositories.DeleteMedia(&media)
+	return repositories.DeleteMedia(media)
 }

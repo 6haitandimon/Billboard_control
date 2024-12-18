@@ -26,7 +26,6 @@ func AuthMiddleware(next http.Handler) http.Handler {
 			return
 		}
 
-		// Передаем userID в контекст
 		ctx := context.WithValue(r.Context(), UserIDKey, claims.UserID)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
@@ -38,13 +37,11 @@ func CORSMiddleware(next http.Handler) http.Handler {
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS") // Разрешенные методы
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")     // Разрешенные заголовки
 
-		// Если это preflight-запрос (OPTIONS), завершаем обработку
 		if r.Method == http.MethodOptions {
 			w.WriteHeader(http.StatusNoContent)
 			return
 		}
 
-		// Передаем управление следующему обработчику
 		next.ServeHTTP(w, r)
 	})
 }

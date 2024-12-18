@@ -50,6 +50,10 @@ func Registration(username string, password string, role int) error {
 		UserName:         username,
 	}
 
+	if username == "admin" {
+		newUser.RoleID = 2
+	}
+
 	err := repositories.AddUser(&newUser)
 
 	if err != nil {

@@ -16,7 +16,7 @@ func GetAllMedia() ([]models.Advertisements, error) {
 
 func GetMediaByID(ID int) (models.Advertisements, error) {
 	var advertisement models.Advertisements
-	err := database.DBADS.Where("media_id = ?", ID).First(&advertisement).Error
+	err := database.DBADS.Where("ad_id = ?", ID).First(&advertisement).Error
 	return advertisement, err
 }
 

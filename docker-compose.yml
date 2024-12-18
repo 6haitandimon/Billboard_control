@@ -1,0 +1,81 @@
+version: '3.8'
+
+services:
+  db:
+    image: 6haitandimon/mysql-database-prepared:v1.0
+    container_name: mysql-db
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+    volumes:
+      - ./my.cnf:/etc/mysql/my.cnf
+      - mysql_data:/var/lib/mysql
+    networks:
+      app-network:
+        ipv4_address: 172.16.238.2
+
+  app:
+    image: 6haitandimon/billboard-back-end:v1.2
+    container_name: billboard-app
+    depends_on:
+      - db
+    ports:
+      - "8080:8080"
+    environment:
+      - DB_HOST=172.16.238.2
+      - DB_PORT=3306
+      - MEDIA_DB=MediaDB
+      - ADS_DB=ADS
+      - DB_USER=root
+      - DB_PASSWORD=root
+#      - ALLOWED_ORIGINS=http://172.16.238.4:3000
+      - HOST_ADDR=0.0.0.0
+      - HOST_PORT=8080
+      - SERVER_API_HOST=http://158.160.20.51/api
+    command: >
+      /app/wait-for-it.sh db:3306 --timeout=60 --strict -- /app/billboard
+    networks:
+      app-network:
+        ipv4_address: 172.16.238.3
+    volumes:
+      - ./ADS:/app/ADS
+
+  frontend:
+    image: 6haitandimon/billboard-front-end:v1.0
+    container_name: billboard-fronted
+    depends_on:
+      - app
+    ports:
+      - "6550:6550"
+#    environment:
+#      - REACT_APP_API_URL=http://172.16.238.3:8080/api
+    networks:
+      app-network:
+        ipv4_address: 172.16.238.4
+#    command: >
+#      /app/wait-for-it.sh app:8080 --timeout=60 --strict -- /app/billboard
+
+  nginx:
+    image: nginx:stable-alpine
+    ports:
+      - "80:80"
+    volumes:
+      - './nginx.conf:/etc/nginx/nginx.conf'
+    depends_on:
+      - app
+      - frontend
+    networks:
+      app-network:
+        ipv4_address: 172.16.238.5
+
+networks:
+  app-network:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.16.238.0/24
+
+volumes:
+  mysql_data:
